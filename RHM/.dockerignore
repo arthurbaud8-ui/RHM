@@ -1,0 +1,35 @@
+node_modules
+npm-debug.log
+.env
+.env.local
+.env.*.local
+dist
+build
+.git
+.gitignore
+README.md
+*.md
+.vscode
+.idea
+*.log
+.DS_Store
+coverage
+.nyc_output
+*.swp
+*.swo
+*~
+
+# Backend
+app/backend/node_modules
+app/backend/dist
+app/backend/uploads
+app/backend/.env
+
+# Frontend
+frontend/node_modules
+frontend/dist
+frontend/.env
+
+# Volumes Docker
+rhm-uploads
+rhm-data

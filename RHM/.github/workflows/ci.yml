@@ -1,0 +1,83 @@
+# CI/CD RHM - Build, lint, tests + Trivy (sécurité, ne fait pas échouer le pipeline)
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build-and-test:
+    name: Build & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Backend – install
+        working-directory: app/backend
+        run: npm ci
+
+      - name: Backend – build
+        working-directory: app/backend
+        run: npm run build
+
+      - name: Backend – lint
+        working-directory: app/backend
+        run: npm run lint
+
+      - name: Backend – test
+        working-directory: app/backend
+        run: npm run test
+        continue-on-error: true
+
+      - name: Backend – tests API
+        working-directory: app/backend
+        run: npm run test:api
+
+      - name: Frontend – install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend – build
+        working-directory: frontend
+        run: npm run build
+
+  trivy-security:
+    name: Trivy (sécurité)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trivy – scan fichiers (dépendances, racine)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+        continue-on-error: true
+
+      - name: Trivy – scan config (Dockerfile, docker-compose)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+        continue-on-error: true

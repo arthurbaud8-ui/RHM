@@ -1,0 +1,14 @@
+node_modules
+dist
+*.log
+.env
+.env.local
+.env.*.local
+.git
+.gitignore
+README.md
+venv
+__pycache__
+*.pyc
+.coverage
+.pytest_cache

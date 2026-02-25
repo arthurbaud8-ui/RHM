@@ -1,0 +1,56 @@
+# RHM - Plateforme de recrutement
+# Usage : cp .env.example .env puis éditer .env ; docker-compose up -d
+# App : http://localhost:8080  (API proxifiée sous /api)
+
+services:
+  backend:
+    build:
+      context: ./app/backend
+      dockerfile: Dockerfile
+    container_name: rhm-backend
+    restart: unless-stopped
+    # Variables lues depuis le .env à la racine (optionnel). Créer avec : cp .env.example .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:8080}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - DATA_FILE=${DATA_FILE:-/data/rhm-data.json}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      # IA (OpenAI ou Groq) : base URL + clé + modèle (ex. Groq : OPENAI_API_BASE_URL=https://api.groq.com/openai/v1, AI_MODEL=llama-3.1-8b-instant)
+      - OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - AI_MODEL=${AI_MODEL:-gpt-4o-mini}
+      - UPLOAD_MAX_SIZE=${UPLOAD_MAX_SIZE:-10485760}
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-900000}
+      - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS:-500}
+    volumes:
+      - rhm-uploads:/app/uploads
+      - rhm-data:/data
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # En Docker (même domaine, nginx proxy /api) : /api. En prod externe : URL complète (ex. https://api.example.com/api)
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    container_name: rhm-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  rhm-uploads:
+  rhm-data:
